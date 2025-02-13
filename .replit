@@ -1,0 +1,24 @@
+run = "npm start"
+[packager]
+language = "nodejs"
+
+[packager.features]
+packageSearch = true
+guessImports = true
+
+[languages.nodejs]
+pattern = "**/*.{js,ts,jsx,tsx}"
+
+[languages.nodejs.languageServer]
+start = ["typescript-language-server", "--stdio"]
+
+[deployment]
+build = ["sh", "-c", "npm install"]
+run = ["sh", "-c", "npm start"]
+
+[nix]
+channel = "stable-22_11"
+
+[env]
+XDG_RUNTIME_DIR = "/tmp/runtime-runner"
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
