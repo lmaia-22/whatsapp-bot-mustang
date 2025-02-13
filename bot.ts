@@ -2,6 +2,7 @@ import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { getRandomBirthdayMessage } from './messages'
 
 // Load environment variables
 dotenv.config();
@@ -10,7 +11,6 @@ dotenv.config();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
 // WhatsApp Client
 const client = new Client({
     authStrategy: new LocalAuth()
@@ -24,9 +24,17 @@ client.on('qr', (qr) => {
 client.on('ready', async () => {
     console.log('✅ Bot is ready!');
 
-    // Run birthday check daily
+    // Temporary code to find group ID
+    // const chats = await client.getChats();
+    // console.log("chats", chats)
+    // chats.forEach(chat => {
+    //     if (chat.timestamp > 1738792321) {
+    //         console.log(`Group Name: ${chat.name}, ID: ${chat.id._serialized}`);
+    //     }
+    // });
+
     checkBirthdays();
-    setInterval(checkBirthdays, 86400000); // Runs every 24 hours
+    setInterval(checkBirthdays, 86400000);
 });
 
 // Function to check birthdays and send messages
@@ -36,9 +44,11 @@ async function checkBirthdays(): Promise<void> {
     const today = new Date().toISOString().split('T')[0]; // Get YYYY-MM-DD format
 
     const { data: birthdays, error } = await supabase
-        .from('birthdays')
-        .select('*')
+        .from('public_members_view')
+        .select()
         .eq('birthdate', today);
+
+        console.log(birthdays)
 
     if (error) {
         console.error('❌ Supabase Error:', error);
@@ -46,12 +56,17 @@ async function checkBirthdays(): Promise<void> {
     }
 
     if (birthdays && birthdays.length > 0) {
+        // const groupId = '120363283556343675@g.us'; // Replace with your actual group ID
+        const groupId = '120363401933202931@g.us'; // Replace with your actual group ID
         for (const person of birthdays) {
-            const phoneNumber = `${person.phone}@c.us`;
-            const message = `🎉 Happy Birthday, ${person.name}! 🎂🥳`;
+            const message = `🎉 ${person.first_name} ${person.last_name}, 🎂🥳\n`;
+
+            const messageText = getRandomBirthdayMessage();
+
+            const fullMessage = message + messageText;
             
-            await client.sendMessage(phoneNumber, message);
-            console.log(`📨 Sent birthday message to ${person.phone}`);
+            await client.sendMessage(groupId, fullMessage);
+            console.log(`📨 Sent birthday message for ${person.first_name}  ${person.last_name} to group chat`);
         }
     } else {
         console.log('No birthdays today.');
