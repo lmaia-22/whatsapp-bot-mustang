@@ -7,7 +7,7 @@
     pkgs.nss
     pkgs.at-spi2-atk
     pkgs.libdrm
-    pkgs.xorg.libxkbcommon
+    pkgs.libxkbcommon
     pkgs.xorg.libX11
     pkgs.xorg.libXcomposite
     pkgs.xorg.libXdamage
