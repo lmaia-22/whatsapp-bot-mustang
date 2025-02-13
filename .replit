@@ -22,4 +22,4 @@ channel = "stable-22_11"
 [env]
 XDG_RUNTIME_DIR = "/tmp/runtime-runner"
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
-PUPPETEER_EXECUTABLE_PATH = "/nix/store/$(ls /nix/store | grep chromium | grep bin)/bin/chromium"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium-browser"
