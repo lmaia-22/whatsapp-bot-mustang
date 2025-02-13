@@ -3,16 +3,16 @@
     pkgs.nodejs-18_x
     pkgs.nodePackages.typescript
     pkgs.chromium
-    pkgs.libgbm
-    pkgs.libnss
-    pkgs.libatk
+    pkgs.mesa
+    pkgs.nss
+    pkgs.at-spi2-atk
     pkgs.libdrm
-    pkgs.libxkbcommon
-    pkgs.libxcomposite
-    pkgs.libxdamage
-    pkgs.libxfixes
-    pkgs.libxrandr
-    pkgs.libgbm
+    pkgs.xorg.libxkbcommon
+    pkgs.xorg.libX11
+    pkgs.xorg.libXcomposite
+    pkgs.xorg.libXdamage
+    pkgs.xorg.libXfixes
+    pkgs.xorg.libXrandr
     pkgs.pango
   ];
 }
