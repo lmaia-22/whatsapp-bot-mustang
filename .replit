@@ -14,7 +14,7 @@ start = ["typescript-language-server", "--stdio"]
 
 [deployment]
 build = ["sh", "-c", "npm install"]
-run = ["sh", "-c", "npm start"]
+run = ["sh", "-c", "chromium --headless --remote-debugging-port=9222 & npm start"]
 
 [nix]
 channel = "stable-22_11"
@@ -22,4 +22,3 @@ channel = "stable-22_11"
 [env]
 XDG_RUNTIME_DIR = "/tmp/runtime-runner"
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
-PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium-browser"

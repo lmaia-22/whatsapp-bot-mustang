@@ -15,6 +15,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
+        headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -23,7 +24,9 @@ const client = new Client({
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu'
-        ]
+        ],
+        executablePath: '/nix/store/chromium-unwrapped/bin/chromium',
+        browserWSEndpoint: 'ws://127.0.0.1:9222'
     }
 });
 
