@@ -24,11 +24,33 @@ const client = new Client({
             '--no-first-run',
             '--no-zygote',
             '--disable-gpu'
-        ],
-        executablePath: '/nix/store/chromium-unwrapped/bin/chromium',
-        browserWSEndpoint: 'ws://127.0.0.1:9222'
+        ]
     }
 });
+
+// Add error handlers
+client.on('auth_failure', (err) => {
+    console.error('Authentication failed:', err);
+});
+
+client.on('disconnected', (reason) => {
+    console.log('Client was disconnected:', reason);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Initialize client with error handling
+try {
+    client.initialize().catch(err => {
+        console.error('Failed to initialize client:', err);
+        process.exit(1);
+    });
+} catch (error) {
+    console.error('Error during initialization:', error);
+    process.exit(1);
+}
 
 client.on('qr', (qr) => {
     qrcode.generate(qr, { small: true });
