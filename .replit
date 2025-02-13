@@ -13,13 +13,13 @@ pattern = "**/*.{js,ts,jsx,tsx}"
 start = ["typescript-language-server", "--stdio"]
 
 [deployment]
-build = ["sh", "-c", "npm install"]
-run = ["sh", "-c", "which chromium && npm start"]
+build = ["sh", "-c", "npm install && npm install puppeteer"]
+run = ["sh", "-c", "npm start"]
 
 [nix]
 channel = "stable-22_11"
 
 [env]
 XDG_RUNTIME_DIR = "/tmp/runtime-runner"
-PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "false"
 CHROME_BIN = "/nix/store/chromium-unwrapped/bin/chromium"
