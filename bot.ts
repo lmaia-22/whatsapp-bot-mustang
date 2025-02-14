@@ -1,11 +1,11 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import { Client, LocalAuth, RemoteAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { getRandomBirthdayMessage } from './messages';
 const { exec } = require("node:child_process");
 const { promisify } = require("node:util");
-
+import SupabaseStore from './store/supabase';
 // Load environment variables
 dotenv.config();
 
@@ -13,7 +13,9 @@ dotenv.config();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-// WhatsApp Client
+
+
+const store = new SupabaseStore();
 
 async function getChromiumPath(): Promise<string> {
     const { stdout } = await promisify(exec)("which chromium");
@@ -52,13 +54,19 @@ async function checkBirthdays(client: Client): Promise<void> {
 }
 
 async function initializeWhatsAppClient() {
-    const chromiumPath = await getChromiumPath();
+    // const chromiumPath = await getChromiumPath();
     
     const client = new Client({
-        authStrategy: new LocalAuth(),
+        authStrategy: new RemoteAuth({
+            clientId: 'whatsapp-bot',
+            store,
+            backupSyncIntervalMs: 300000 
+        }),
         puppeteer: {
             headless: true,
-            executablePath: chromiumPath,
+            executablePath: process.env.NODE_ENV === 'production' 
+            ? '/nix/store/chromium-unwrapped/bin/chromium'
+            : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -71,6 +79,11 @@ async function initializeWhatsAppClient() {
             ]
         }
     });
+
+    client.on('authenticated', async (session) => {
+        console.log('Client authenticated', session);
+    });
+
 
     client.on('auth_failure', (err) => {
         console.error('Authentication failed:', err);
@@ -88,7 +101,6 @@ async function initializeWhatsAppClient() {
     client.on('ready', async () => {
         console.log('✅ Bot is ready!');
         checkBirthdays(client);
-        setInterval(() => checkBirthdays(client), 86400000);
     });
 
     try {
@@ -101,7 +113,6 @@ async function initializeWhatsAppClient() {
     return client;
 }
 
-// Error handling for unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
