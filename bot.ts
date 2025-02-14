@@ -52,9 +52,6 @@ async function checkBirthdays(client: Client): Promise<void> {
 }
 
 async function initializeWhatsAppClient() {    
-    const chromiumPath = await getChromiumPath();
-    console.log('Using Chromium path:', chromiumPath);
-
     mongoose.connect(process.env.MONGODB_URI).then(() => {
         const store = new MongoStore({ mongoose: mongoose });
         const client = new Client({
@@ -65,27 +62,28 @@ async function initializeWhatsAppClient() {
             }),
             puppeteer: {
                 headless: true,
-                executablePath: process.env.NODE_ENV === 'production' ? chromiumPath : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
+                product: 'chrome',
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
-                    '--disable-extensions',
-                    '--disable-software-rasterizer',
-                    '--disable-web-security',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--single-process',
-                    '--ignore-certificate-errors',
-                    '--enable-features=NetworkService'
+                    '--window-size=1920x1080',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-breakpad',
+                    '--disable-component-extensions-with-background-pages',
+                    '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                    '--disable-ipc-flooding-protection',
+                    '--disable-renderer-backgrounding',
+                    '--enable-features=NetworkService,NetworkServiceInProcess',
+                    '--force-color-profile=srgb',
+                    '--metrics-recording-only',
+                    '--no-first-run'
                 ],
                 ignoreHTTPSErrors: true,
-                defaultViewport: null,
-                handleSIGINT: false,
-                handleSIGTERM: false,
-                handleSIGHUP: false,
-                timeout: 0
+                userDataDir: './user_data',
             }
         });
 
