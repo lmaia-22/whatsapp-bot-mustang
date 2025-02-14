@@ -65,7 +65,7 @@ async function initializeWhatsAppClient() {
             }),
             puppeteer: {
                 headless: true,
-                executablePath: chromiumPath,
+                executablePath: process.env.NODE_ENV === 'production' ? chromiumPath : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -80,20 +80,21 @@ async function initializeWhatsAppClient() {
                     '--ignore-certificate-errors',
                     '--enable-features=NetworkService'
                 ],
-                defaultViewport: {
-                    width: 1920,
-                    height: 1080
-                }
+                ignoreHTTPSErrors: true,
+                defaultViewport: null,
+                handleSIGINT: false,
+                handleSIGTERM: false,
+                handleSIGHUP: false,
+                timeout: 0
             }
         });
 
-        let retries = 0;
-        const maxRetries = 3;
+        let isClientInitialized = false;
 
         client.on('authenticated', async (session) => {
             try {
                 console.log('Authentication successful');
-                retries = 0;
+                isClientInitialized = true;
             } catch (error) {
                 console.error('Error in authentication handler:', error);
             }
@@ -101,12 +102,8 @@ async function initializeWhatsAppClient() {
 
         client.on('auth_failure', async (err) => {
             console.error('Authentication failed:', err);
-            if (retries < maxRetries) {
-                retries++;
-                console.log(`Retrying initialization (${retries}/${maxRetries})...`);
-                setTimeout(() => client.initialize(), 5000);
-            } else {
-                console.error('Max retries reached, exiting...');
+            if (!isClientInitialized) {
+                console.error('Initial authentication failed, exiting...');
                 process.exit(1);
             }
         });
