@@ -1,7 +1,7 @@
 import { Client, RemoteAuth } from 'whatsapp-web.js';
 import { MongoStore } from 'wwebjs-mongo'
 const mongoose = require('mongoose');
-import qrcode from 'qrcode-terminal';
+import qrcodeTerminal from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { getRandomBirthdayMessage } from './messages';
@@ -116,7 +116,7 @@ async function initializeWhatsAppClient() {
     });
 
     client.on('qr', (qr) => {
-        qrcode.generate(qr, { small: true });
+        qrcodeTerminal.generate(qr, { small: true });
         console.log('Scan the QR code to authenticate WhatsApp bot.');
     });
 
