@@ -15,18 +15,11 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
         with:
+          args: install
           node-version: 18
-
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@latest
-        with:
-          chrome-version: stable
-
-      - name: Set Chrome path
-        run: |
-          echo "CHROME_PATH=$(which chrome)" >> $GITHUB_ENV
-          echo "NODE_ENV=production" >> $GITHUB_ENV
 
       - name: Install npm dependencies
         run: npm install
@@ -39,4 +32,8 @@ jobs:
           echo "CHROME_BIN=${{ env.CHROME_PATH }}" >> .env
 
       - name: Run WhatsApp Bot
-        run: npm run start
+        uses: mujo-code/puppeteer-headful@16.6.0
+        env:
+            CI: "true"
+        with:
+            args: npm run start
