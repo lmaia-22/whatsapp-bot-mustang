@@ -39,19 +39,34 @@ async function checkBirthdays(client: Client): Promise<void> {
     if (birthdays && birthdays.length > 0) {
         const groupId = '120363401933202931@g.us';
         for (const person of birthdays) {
-            const message = `🎉 ${person.first_name} ${person.last_name}, 🎂🥳\n`;
-            const messageText = getRandomBirthdayMessage();
-            const fullMessage = message + messageText;
-            
-            await client.sendMessage(groupId, fullMessage);
-            console.log(`📨 Sent birthday message for ${person.first_name} ${person.last_name} to group chat`);
+            try {
+                const message = `🎉 ${person.first_name} ${person.last_name}, 🎂🥳\n`;
+                const messageText = getRandomBirthdayMessage();
+                const fullMessage = message + messageText;
+                
+                const sent = await client.sendMessage(groupId, fullMessage);
+                console.log(`📨 Sent birthday message for ${person.first_name} ${person.last_name} to group chat`);
+                
+                // Wait for message to be properly sent
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                if (!sent) {
+                    throw new Error('Message not sent');
+                }
+            } catch (error) {
+                console.error(`Failed to send message for ${person.first_name}:`, error);
+            }
         }
     } else {
         console.log('No birthdays today.');
     }
 
+    // Wait for any pending operations
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    
     // Gracefully close the client and exit
     await client.destroy();
+    await mongoose.connection.close();
     process.exit(0);
 }
 
