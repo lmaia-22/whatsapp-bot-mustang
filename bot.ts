@@ -53,6 +53,8 @@ async function checkBirthdays(client: Client): Promise<void> {
 
 async function initializeWhatsAppClient() {    
     const chromiumPath = await getChromiumPath();
+    console.log('Using Chromium path:', chromiumPath);
+
     mongoose.connect(process.env.MONGODB_URI).then(() => {
         const store = new MongoStore({ mongoose: mongoose });
         const client = new Client({
@@ -63,25 +65,51 @@ async function initializeWhatsAppClient() {
             }),
             puppeteer: {
                 headless: true,
-                executablePath: process.env.NODE_ENV === 'production' ? chromiumPath : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                executablePath: chromiumPath,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--disable-extensions',
+                    '--disable-software-rasterizer',
+                    '--disable-web-security',
+                    '--no-first-run',
+                    '--no-zygote',
                     '--single-process',
-                    '--disable-gpu'
-                ]
+                    '--ignore-certificate-errors',
+                    '--enable-features=NetworkService'
+                ],
+                defaultViewport: {
+                    width: 1920,
+                    height: 1080
+                }
             }
         });
 
-    client.on('authenticated', async (session) => {
-        console.log('Client authenticated', session);
-    });
+        let retries = 0;
+        const maxRetries = 3;
 
+        client.on('authenticated', async (session) => {
+            try {
+                console.log('Authentication successful');
+                retries = 0;
+            } catch (error) {
+                console.error('Error in authentication handler:', error);
+            }
+        });
 
-    client.on('auth_failure', (err) => {
-        console.error('Authentication failed:', err);
-    });
+        client.on('auth_failure', async (err) => {
+            console.error('Authentication failed:', err);
+            if (retries < maxRetries) {
+                retries++;
+                console.log(`Retrying initialization (${retries}/${maxRetries})...`);
+                setTimeout(() => client.initialize(), 5000);
+            } else {
+                console.error('Max retries reached, exiting...');
+                process.exit(1);
+            }
+        });
 
     client.on('disconnected', (reason) => {
         console.log('Client was disconnected:', reason);
