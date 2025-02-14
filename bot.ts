@@ -82,8 +82,7 @@ async function initializeWhatsAppClient() {
                     '--metrics-recording-only',
                     '--no-first-run'
                 ],
-                ignoreHTTPSErrors: true,
-                userDataDir: './user_data',
+                ignoreHTTPSErrors: true
             }
         });
 
