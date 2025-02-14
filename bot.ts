@@ -5,6 +5,8 @@ import qrcode from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { getRandomBirthdayMessage } from './messages';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 // Load environment variables
 dotenv.config();
 
@@ -12,6 +14,11 @@ dotenv.config();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function getChromiumPath(): Promise<string> {
+    const { stdout } = await promisify(exec)("which chromium");
+    return stdout.trim();
+}
 
 // Function to check birthdays and send messages
 async function checkBirthdays(client: Client): Promise<void> {
@@ -45,6 +52,7 @@ async function checkBirthdays(client: Client): Promise<void> {
 }
 
 async function initializeWhatsAppClient() {    
+    const chromiumPath = await getChromiumPath();
     mongoose.connect(process.env.MONGODB_URI).then(() => {
         const store = new MongoStore({ mongoose: mongoose });
         const client = new Client({
@@ -55,18 +63,13 @@ async function initializeWhatsAppClient() {
             }),
             puppeteer: {
                 headless: true,
-                executablePath: process.env.NODE_ENV === 'production' 
-                ? '/nix/store/chromium-unwrapped/bin/chromium'
-                : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                executablePath: process.env.NODE_ENV === 'production' ? chromiumPath : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--disable-gpu',
-                    '--disable-extensions'
+                    '--single-process',
+                    '--disable-gpu'
                 ]
             }
         });
