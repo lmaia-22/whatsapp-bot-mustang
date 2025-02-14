@@ -33,7 +33,7 @@ async function checkBirthdays(client: Client): Promise<void> {
 
     if (error) {
         console.error('❌ Supabase Error:', error);
-        return;
+        process.exit(1);
     }
 
     if (birthdays && birthdays.length > 0) {
@@ -49,6 +49,10 @@ async function checkBirthdays(client: Client): Promise<void> {
     } else {
         console.log('No birthdays today.');
     }
+
+    // Gracefully close the client and exit
+    await client.destroy();
+    process.exit(0);
 }
 
 async function initializeWhatsAppClient() {    
