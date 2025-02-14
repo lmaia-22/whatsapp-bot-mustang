@@ -15,25 +15,29 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
         with:
-          args: install
           node-version: 18
 
-      - name: Install npm dependencies
-        run: npm install
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install puppeteer
 
       - name: Create .env file
         run: |
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
-          echo "CHROME_BIN=${{ env.CHROME_PATH }}" >> .env
+          echo "CHROME_PATH=$(which google-chrome)" >> .env
+          echo "NODE_ENV=production" >> .env
 
       - name: Run WhatsApp Bot
-        uses: mujo-code/puppeteer-headful@16.6.0
+        run: npm run start
         env:
-            CI: "true"
-        with:
-            args: npm run start
+          CI: "true"
+          PUPPETEER_EXECUTABLE_PATH: $(which google-chrome)
