@@ -8,24 +8,35 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Clonar o repositório
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Instalar dependências
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+
+      - name: Set Chromium path
+        run: |
+          echo "CHROME_PATH=$(which chromium-browser)" >> $GITHUB_ENV
+          echo "NODE_ENV=production" >> $GITHUB_ENV
+
+      - name: Install npm dependencies
         run: npm install
 
-      - name: Criar arquivo .env
+      - name: Create .env file
         run: |
-            echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-            echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-            echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
+          echo "CHROME_PATH=${{ env.CHROME_PATH }}" >> .env
 
-      - name: Correr o Bot
+      - name: Run WhatsApp Bot
         run: npm run start
