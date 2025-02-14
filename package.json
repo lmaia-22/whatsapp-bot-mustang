@@ -11,6 +11,8 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.13.2",
     "typescript": "^5.7.3"
   },
@@ -18,8 +20,10 @@
     "@supabase/supabase-js": "^2.48.1",
     "chromium": "^3.0.3",
     "dotenv": "^16.4.7",
+    "mongoose": "^8.10.1",
     "puppeteer-core": "^24.2.0",
     "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.26.0"
+    "whatsapp-web.js": "^1.26.0",
+    "wwebjs-mongo": "^1.1.0"
   }
 }

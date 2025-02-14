@@ -1,11 +1,10 @@
-import { Client, LocalAuth, RemoteAuth } from 'whatsapp-web.js';
+import { Client, RemoteAuth } from 'whatsapp-web.js';
+import { MongoStore } from 'wwebjs-mongo'
+const mongoose = require('mongoose');
 import qrcode from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { getRandomBirthdayMessage } from './messages';
-const { exec } = require("node:child_process");
-const { promisify } = require("node:util");
-import SupabaseStore from './store/supabase';
 // Load environment variables
 dotenv.config();
 
@@ -13,14 +12,6 @@ dotenv.config();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-
-const store = new SupabaseStore();
-
-async function getChromiumPath(): Promise<string> {
-    const { stdout } = await promisify(exec)("which chromium");
-    return stdout.trim();
-}
 
 // Function to check birthdays and send messages
 async function checkBirthdays(client: Client): Promise<void> {
@@ -53,32 +44,32 @@ async function checkBirthdays(client: Client): Promise<void> {
     }
 }
 
-async function initializeWhatsAppClient() {
-    // const chromiumPath = await getChromiumPath();
-    
-    const client = new Client({
-        authStrategy: new RemoteAuth({
-            clientId: 'whatsapp-bot',
-            store,
-            backupSyncIntervalMs: 300000 
-        }),
-        puppeteer: {
-            headless: true,
-            executablePath: process.env.NODE_ENV === 'production' 
-            ? '/nix/store/chromium-unwrapped/bin/chromium'
-            : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
-                '--disable-extensions'
-            ]
-        }
-    });
+async function initializeWhatsAppClient() {    
+    mongoose.connect(process.env.MONGODB_URI).then(() => {
+        const store = new MongoStore({ mongoose: mongoose });
+        const client = new Client({
+            authStrategy: new RemoteAuth({
+                clientId: 'whatsapp-bot',
+                store: store,
+                backupSyncIntervalMs: 300000 
+            }),
+            puppeteer: {
+                headless: true,
+                executablePath: process.env.NODE_ENV === 'production' 
+                ? '/nix/store/chromium-unwrapped/bin/chromium'
+                : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-extensions'
+                ]
+            }
+        });
 
     client.on('authenticated', async (session) => {
         console.log('Client authenticated', session);
@@ -103,14 +94,21 @@ async function initializeWhatsAppClient() {
         checkBirthdays(client);
     });
 
+    client.on('remote_session_saved', () => {
+        console.log('Session data saved remotely');
+      });  
+    
     try {
-        await client.initialize();
+        client.initialize();
     } catch (error) {
         console.error('Error during initialization:', error);
         process.exit(1);
     }
 
     return client;
+    
+    });
+    
 }
 
 process.on('unhandledRejection', (reason, promise) => {
