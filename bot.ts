@@ -5,8 +5,6 @@ import qrcodeTerminal from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { getRandomBirthdayMessage } from './messages';
-import { promisify } from 'util';
-import { exec } from 'child_process';
 // Load environment variables
 dotenv.config();
 
@@ -14,11 +12,6 @@ dotenv.config();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || '';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-async function getChromiumPath(): Promise<string> {
-    const { stdout } = await promisify(exec)("which chromium");
-    return stdout.trim();
-}
 
 // Function to check birthdays and send messages
 async function checkBirthdays(client: Client): Promise<void> {
@@ -37,6 +30,7 @@ async function checkBirthdays(client: Client): Promise<void> {
     }
 
     if (birthdays && birthdays.length > 0) {
+        // const groupId = '120363283556343675@g.us';
         const groupId = '120363401933202931@g.us';
         for (const person of birthdays) {
             try {
@@ -45,14 +39,25 @@ async function checkBirthdays(client: Client): Promise<void> {
                 const fullMessage = message + messageText;
                 
                 const sent = await client.sendMessage(groupId, fullMessage);
-                console.log(`📨 Sent birthday message for ${person.first_name} ${person.last_name} to group chat`);
                 
-                // Wait for message to be properly sent
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                
-                if (!sent) {
-                    throw new Error('Message not sent');
-                }
+                // Wait for message to be delivered
+                await new Promise((resolve) => {
+                    const checkDelivery = (msg: any) => {
+                        if (msg.id._serialized === sent.id._serialized && msg.ack > 0) {
+                            client.removeListener('message_ack', checkDelivery);
+                            console.log(`📨 Message delivered for ${person.first_name} ${person.last_name}`);
+                            resolve(void 0);
+                        }
+                    };
+                    client.on('message_ack', checkDelivery);
+                    
+                    // Timeout after 30 seconds
+                    setTimeout(() => {
+                        client.removeListener('message_ack', checkDelivery);
+                        console.log(`⚠️ Message delivery timeout for ${person.first_name}`);
+                        resolve(void 0);
+                    }, 30000);
+                });
             } catch (error) {
                 console.error(`Failed to send message for ${person.first_name}:`, error);
             }
@@ -61,10 +66,10 @@ async function checkBirthdays(client: Client): Promise<void> {
         console.log('No birthdays today.');
     }
 
-    // Wait for any pending operations
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // Final wait to ensure all operations are complete
+    await new Promise(resolve => setTimeout(resolve, 15000));
     
-    // Gracefully close the client and exit
+    console.log('Closing connections...');
     await client.destroy();
     await mongoose.connection.close();
     process.exit(0);
