@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 import qrcodeTerminal from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { getRandomBirthdayMessage } from './messages';
+import { getRandomBirthdayMessage } from './src/messages';
 // Load environment variables
 dotenv.config();
 
@@ -15,64 +15,92 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Function to check birthdays and send messages
 async function checkBirthdays(client: Client): Promise<void> {
-    console.log('🔍 Checking for birthdays...');
+    try {
+        console.log('🔍 Checking for birthdays...');
 
-    const today = new Date().toISOString().split('T')[0];
-
-    const { data: birthdays, error } = await supabase
-        .from('public_members_view')
-        .select()
-        .eq('birthdate', today);
-
-    if (error) {
-        console.error('❌ Supabase Error:', error);
-        process.exit(1);
-    }
-
-    if (birthdays && birthdays.length > 0) {
-        // const groupId = '120363283556343675@g.us';
-        const groupId = '120363401933202931@g.us';
-        for (const person of birthdays) {
-            try {
-                const message = `🎉 ${person.first_name} ${person.last_name}, 🎂🥳\n`;
-                const messageText = getRandomBirthdayMessage();
-                const fullMessage = message + messageText;
-                
-                const sent = await client.sendMessage(groupId, fullMessage);
-                
-                // Wait for message to be delivered
-                await new Promise((resolve) => {
-                    const checkDelivery = (msg: any) => {
-                        if (msg.id._serialized === sent.id._serialized && msg.ack > 0) {
-                            client.removeListener('message_ack', checkDelivery);
-                            console.log(`📨 Message delivered for ${person.first_name} ${person.last_name}`);
-                            resolve(void 0);
-                        }
-                    };
-                    client.on('message_ack', checkDelivery);
-                    
-                    // Timeout after 30 seconds
-                    setTimeout(() => {
-                        client.removeListener('message_ack', checkDelivery);
-                        console.log(`⚠️ Message delivery timeout for ${person.first_name}`);
-                        resolve(void 0);
-                    }, 30000);
-                });
-            } catch (error) {
-                console.error(`Failed to send message for ${person.first_name}:`, error);
+        // Wait longer for client to be fully ready
+        if (!client.info) {
+            console.log('Waiting for client to be fully ready...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            if (!client.info) {
+                throw new Error('Client failed to initialize properly');
             }
         }
-    } else {
-        console.log('No birthdays today.');
-    }
 
-    // Final wait to ensure all operations are complete
-    await new Promise(resolve => setTimeout(resolve, 15000));
-    
-    console.log('Closing connections...');
-    await client.destroy();
-    await mongoose.connection.close();
-    process.exit(0);
+        const today = new Date();
+        const month = today.getMonth() + 1;
+        const day = today.getDate();
+        console.log(`Checking birthdays for date: month ${month}, day ${day}`);
+
+        const { data: birthdays, error } = await supabase
+            .rpc('get_todays_birthdays', {
+                target_month: month,
+                target_day: day
+            });
+
+        if (error) {
+            throw error;
+        }
+
+        if (birthdays && birthdays.length > 0) {
+            const groupId = '120363401933202931@g.us';
+            const chat = await client.getChatById(groupId);
+
+            if (!chat || !chat.id) {
+                throw new Error('Could not find or access the group chat');
+            }
+
+            for (const person of birthdays) {
+                try {
+                    const message = `🎉 ${person.first_name} ${person.last_name}, 🎂🥳\n`;
+                    const messageText = getRandomBirthdayMessage();
+                    const fullMessage = message + messageText;
+
+                    console.log(`Preparing to send message for ${person.first_name}...`);
+                    const sent = await client.sendMessage(groupId, fullMessage);
+
+                    // More robust message delivery confirmation
+                    const deliveryResult = await new Promise((resolve) => {
+                        const checkDelivery = (msg: any) => {
+                            if (msg.id._serialized === sent.id._serialized) {
+                                client.removeListener('message_ack', checkDelivery);
+                                resolve(true);
+                            }
+                        };
+                        
+                        client.on('message_ack', checkDelivery);
+                        setTimeout(() => {
+                            client.removeListener('message_ack', checkDelivery);
+                            resolve(false);
+                        }, 15000);
+                    });
+
+                    console.log(deliveryResult ? 
+                        `✅ Message sent for ${person.first_name}` : 
+                        `⚠️ Message status unclear for ${person.first_name}`
+                    );
+
+                    // Longer delay between messages
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                } catch (error) {
+                    console.error(`Failed to send message for ${person.first_name}:`, error);
+                }
+            }
+        } else {
+            console.log('No birthdays today');
+        }
+    } catch (error) {
+        console.error('Error in checkBirthdays:', error);
+    } finally {
+        console.log('Cleaning up...');
+        try {
+            await mongoose.connection.close();
+            await client.destroy();
+        } catch (error) {
+            console.error('Error during cleanup:', error);
+        }
+        process.exit(0);
+    }
 }
 
 async function initializeWhatsAppClient() {    
@@ -86,7 +114,7 @@ async function initializeWhatsAppClient() {
             }),
             puppeteer: {
                 headless: true,
-                executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
+                executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 product: 'chrome',
                 args: [
                     '--no-sandbox',
@@ -114,7 +142,7 @@ async function initializeWhatsAppClient() {
 
         client.on('authenticated', async (session) => {
             try {
-                console.log('Authentication successful');
+                console.log('Authentication successful', session);
                 isClientInitialized = true;
             } catch (error) {
                 console.error('Error in authentication handler:', error);
