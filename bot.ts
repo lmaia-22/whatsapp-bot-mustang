@@ -43,7 +43,8 @@ async function checkBirthdays(client: Client): Promise<void> {
         }
 
         if (birthdays && birthdays.length > 0) {
-            const groupId = '120363401933202931@g.us';
+            const groupId = '120363283556343675@g.us';
+            //const groupId = '120363401933202931@g.us';
             const chat = await client.getChatById(groupId);
 
             if (!chat || !chat.id) {
